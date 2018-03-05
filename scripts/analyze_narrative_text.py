@@ -5,12 +5,16 @@ from collections import Counter
 import unidecode
 from wordcloud import WordCloud
 import matplotlib.pyplot as plt
+import os
 
 # Create list of stop words for analyzing Narrative text
 stop_words = list(set(stopwords.words("english")))
 stop_words = stop_words + ['\"', '\'', ',', ';', ':', '-', '~', '?',
                            '!', '.', '(', ')', '[', ']', '{', '}', '/',
                            '&', 'airplane', 'aircraft', 'pilot', 'nan']
+
+# Select which variable to create word clouds for by group
+by_var = 'AircraftDamage'
 
 # Import flattened CSV census data into dataframe
 df = pd.read_csv('../output/Full_Aviation_Data.csv')
@@ -67,10 +71,10 @@ df['first_sentence'] = df.apply(get_ntsb_disclaimer, axis=1)
 
 # Pull top term frequencies for each probable_cause text
 df['term_frequencies'] = df.apply(get_term_frequencies, axis=1)
-
 df = df[df['term_frequencies'] != np.NaN]
 
-by_var = 'AircraftDamage'
+# Create unique values in by_var for building word clouds
+index_list = list(df[by_var].value_counts().index)
 y = pd.DataFrame({'term_frequencies': df.groupby(by_var)['term_frequencies'].apply(lambda x: x.sum()),
                   'count': df[by_var].value_counts()})
 y = y.reset_index()
@@ -101,7 +105,6 @@ def sum_term_frequencies(row):
 
 
 y['frequency_sums'] = y.apply(sum_term_frequencies, axis=1)
-index_list = ['Minor', 'Substantial', 'Destroyed']
 
 
 # Create wordcloud image for the indices used to group frequency counts
@@ -116,8 +119,13 @@ def create_wordcloud_by_index(index_list):
         plt.imshow(wordcloud, interpolation='bilinear')
         plt.axis("off")
         plt.title(index_val + ': Most Informative Terms')
-        plt.savefig('../output/figs/wordcloud/' + index_val + '_wordcloud.png', bbox_inches='tight')
+        plt.savefig('../output/figs/wordcloud/' + by_var + '/' + index_val.replace('/', ' or ') + '_wordcloud.png', bbox_inches='tight')
         plt.close()
 
+
+# Create directory for output word clouds stored by variable
+full_path = r"C:\Users\Richard\Documents\git_projects\data-scientist-exercise02\output\figs\wordcloud\\"
+if not os.path.exists(full_path+by_var):
+    os.makedirs(full_path+by_var)
 
 create_wordcloud_by_index(index_list)
